@@ -3,6 +3,10 @@ import subprocess as sp
 import os
 import pymysql
 import socket
+import urllib.request
+import tarfile
+import os
+import errno
 from cement.core import foundation
 
 # create the application
@@ -60,7 +64,7 @@ if app.pargs.nginx:
    return False
  
  hasNGINX()
- domainName=input("\nEnter the domain name:\n")
+ domainName=input("\nEnter a domain name of your choice:")
 
  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
  s.connect(("8.8.8.8",80))
@@ -71,7 +75,7 @@ if app.pargs.nginx:
  f.write("\n"+myip+" "+domainName+" "+"www."+domainName)
  f.close()
 
- os.system('sudo touch /etc/nginx/sites-available/'+domainName)
+ open('/etc/nginx/sites-available/'+domainName,'a').close()
  a=open('/etc/nginx/sites-available/'+domainName,'a')
  a.write("server {"
         "\n\tserver_name"+" "+domainName+" "+"www."+domainName+";"
@@ -96,14 +100,32 @@ if app.pargs.nginx:
  "\n\n}")
  a.close()
 
- os.system('ln -s /etc/nginx/sites-available/'+domainName+' /etc/nginx/sites-enabled/')
- os.system('mkdir -p /var/www/'+domainName+'/htdocs/ /var/www/'+domainName+'/logs/ && cd /var/www/'+domainName+'/htdocs/')
- os.system('wget http://wordpress.org/latest.tar.gz')
- os.system('tar --strip-components=1 -xvf latest.tar.gz && rm latest.tar.gz')
- os.system('chown -R www-data:www-data /var/www/'+domainName+'/ ')
-
+ os.symlink('/etc/nginx/sites-available/'+domainName+'','/etc/nginx/sites-enabled/'+domainName+'')
  try:
-  conn=pymysql.connect(user='root',passwd='m')
+  os.makedirs('/var/www/'+domainName+'/htdocs/')
+ except OSError as exc: 
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+     pass
+ try:
+  os.makedirs('/var/www/'+domainName+'/logs/')
+ except OSError as exc: 
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+     pass
+ path='/var/www/'+domainName+'/htdocs/'
+ os.chdir(path)	 
+ print("Downloading Wordpress, please wait......")
+ url='http://wordpress.org/latest.tar.gz'
+ f = urllib.request.urlopen(url)
+ data = f.read()
+ with open("/var/www/"+domainName+"/htdocs/latest.tar.gz", "wb") as code:
+  code.write(data)
+ tar = tarfile.open("/var/www/"+domainName+"/htdocs/latest.tar.gz","r:gz")
+ tar.extractall("/var/www/"+domainName+"/htdocs/") 
+ os.system('chown -R www-data:www-data /var/www/'+domainName+'/ ')
+ rootpass=input('Please type in your root password of mysql:')
+ 
+ try:
+  conn=pymysql.connect(user='root',passwd=''+rootpass)
   conn.autocommit(True)
   cur=conn.cursor()
   cur.execute('CREATE DATABASE'+' '+"`"+domainName+'_db'+"`;")
@@ -111,11 +133,11 @@ if app.pargs.nginx:
  except:
   print("\n\n ooooops! Cannot connect to the database!")
 
- os.system('ln -s /var/log/nginx/'+domainName+'.access.log /var/www/'+domainName+'/logs/access.log')
- os.system('ln -s /var/log/nginx/'+domainName+'.error.log /var/www/'+domainName+'/logs/error.log')
+ os.symlink('/var/log/nginx/'+domainName+'.access.log','/var/www/'+domainName+'/logs/access.log')
+ os.symlink('/var/log/nginx/'+domainName+'.error.log','/var/www/'+domainName+'/logs/error.log')
 
  os.system('cp /var/www/'+domainName+'/htdocs/wp-config-sample.php /var/www/'+domainName+'/htdocs/wp-config.php')
-
+#writing to wpconfig
  filename="/var/www/"+domainName+"/htdocs/wp-config.php"
  text=open(filename).read()
  open(filename,"w").write(text.replace("database_name_here",""+domainName+'_db'))
@@ -126,7 +148,7 @@ if app.pargs.nginx:
 
  filename="/var/www/"+domainName+"/htdocs/wp-config.php"
  text=open(filename).read()
- open(filename,"w").write(text.replace("password_here","m"))
+ open(filename,"w").write(text.replace("password_here",""+rootpass))
 
  os.system('sudo service nginx reload')
  os.system('sudo /etc/init.d/mysql restart')
