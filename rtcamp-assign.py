@@ -136,17 +136,17 @@ if app.pargs.nginx:
  os.symlink('/var/log/nginx/'+domainName+'.access.log','/var/www/'+domainName+'/logs/access.log')
  os.symlink('/var/log/nginx/'+domainName+'.error.log','/var/www/'+domainName+'/logs/error.log')
 
- os.system('cp /var/www/'+domainName+'/htdocs/wp-config-sample.php /var/www/'+domainName+'/htdocs/wp-config.php')
+ os.system('cp /var/www/'+domainName+'/htdocs/wordpress/wp-config-sample.php /var/www/'+domainName+'/htdocs/wordpress/wp-config.php')
 #writing to wpconfig
- filename="/var/www/"+domainName+"/htdocs/wp-config.php"
+ filename="/var/www/"+domainName+"/htdocs/wordpress/wp-config.php"
  text=open(filename).read()
  open(filename,"w").write(text.replace("database_name_here",""+domainName+'_db'))
 
- filename="/var/www/"+domainName+"/htdocs/wp-config.php"
+ filename="/var/www/"+domainName+"/htdocs/wordpress/wp-config.php"
  text=open(filename).read()
  open(filename,"w").write(text.replace("username_here","root"))
 
- filename="/var/www/"+domainName+"/htdocs/wp-config.php"
+ filename="/var/www/"+domainName+"/htdocs/wordpress/wp-config.php"
  text=open(filename).read()
  open(filename,"w").write(text.replace("password_here",""+rootpass))
 
@@ -154,7 +154,7 @@ if app.pargs.nginx:
  os.system('sudo /etc/init.d/mysql restart')
  os.system('sudo /etc/init.d/php5-fpm restart ')
 
- print('\n\nEverythings set, please open'+' '+domainName+' '+'in your browser!' )
+ print('\n\nEverythings set, please open'+' '+domainName+' '+'in your browser!\n' )
 
 # close the application
 app.close()
